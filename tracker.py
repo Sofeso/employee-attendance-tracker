@@ -134,9 +134,27 @@ def run_tracker(emp_file="data/employees.csv", att_file="data/attendance.csv",
     absenteeism_alerts(merged)
     late_arrivals(merged)
     department_summary(merged)
+    punctuality_score(merged)
     export_report(merged, output_file)
     print("\n" + "=" * 62)
 
+def punctuality_score(df):
+    print_section("PUNCTUALITY SCORE")
+    total_days = df["date"].nunique()
+    scores = df.groupby(["employee_id", "name"]).apply(
+        lambda x: round(
+            ((x["status"] == "present").sum() * 100 +
+             (x["status"] == "late").sum() * 50) /
+            (total_days * 100) * 100, 1
+        )
+    ).reset_index()
+    scores.columns = ["employee_id", "name", "score"]
+    scores = scores.sort_values("score", ascending=False)
+
+    for _, row in scores.iterrows():
+        bar = "█" * int(row["score"] / 5)
+        status = "🌟" if row["score"] >= 90 else "✅" if row["score"] >= 75 else "⚠️ "
+        print(f"  {status} {row['name']:<25} {bar:<22} {row['score']:>5.1f}%")
 
 if __name__ == "__main__":
     run_tracker()
